@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Author: sims.jrobert@gmail.com (Jason Sims)
 #
@@ -11,21 +11,24 @@
 # - Add some analytics for the golf data.
 # - Convert round date to use datetime
 #
-import ConfigParser
+import configparser
 import sys
 import pymongo
 
 from dateutil import parser
 from display_tools.display_tools import TextOutput as output
-from HTMLParser import HTMLParser
+from html.parser import HTMLParser
 from pymongo import MongoClient
-from urllib2 import urlopen
+from urllib.request import urlopen
 
-BASE_URL = 'http://golfshot.com/members/'
+BASE_URL = 'https://golfshot.com/profiles/'
 CONFIG_FILE = './golfshot.cfg'
+# https://play.golfshot.com/profiles/Vm65JW/rounds
+
 
 class HtmlListReader(HTMLParser):
   def __init__(self, url):
+    print("url " + url)
     self.in_list = False
     self.page_data = False
     self.round_data = {}
@@ -33,7 +36,7 @@ class HtmlListReader(HTMLParser):
     self.current_round = ''
     HTMLParser.__init__(self)
     req = urlopen(url)
-    self.feed(req.read())
+    self.feed(req.read().decode('utf-8'))
 
   # TODO: Figure out how to either refactor this epic conditionals or fit it
   # within the 80 char limit.
@@ -65,10 +68,9 @@ class GolfShotExporter():
 
   def __init__(self):
     self.config = initialize_config()
-    connection = pymongo.Connection(self.config.get('db', 'url'), safe=True)
+    connection = MongoClient(self.config.get('db', 'url'))
     db = connection.gs_data
     self.rounds = db.rounds
-
 
   def pull_golfshot_data(self, golfer_data):
     """Read golfer data from Golfshot."""
@@ -109,7 +111,7 @@ class GolfShotExporter():
     for golf_round in normalized_rounds:
       golf_round['golfer_name'] = golfer_name
       try:
-        self.rounds.insert(golf_round)
+        self.rounds.insert_one(golf_round)
       except pymongo.errors.DuplicateKeyError:
         output.warn('Skipping...round already exists in golfshot DB')
         continue
@@ -131,11 +133,11 @@ def main():
 
 def initialize_config():
   """Initialize the golfshot config file."""
-  config = ConfigParser.ConfigParser()
+  config = configparser.ConfigParser()
   try:
-    config.readfp(open(CONFIG_FILE))
+    config.read(CONFIG_FILE)
   except IOError as e:
-    print 'Error reading %s: %s' % (CONFIG_FILE, e)
+    print('Error reading %s: %s' % (CONFIG_FILE, e))
     exit(1)
 
   return config

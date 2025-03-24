@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  mongodb:
+    image: mongo:latest   # Official MongoDB image
+    container_name: mongodb_test
+    ports:
+      - "27017:27017"     # Expose MongoDB on localhost port 27017
+    volumes:
+      - mongodb_data:/data/db  # Persistent data storage volume
+
+volumes:
+  mongodb_data:            # Named volume for storing MongoDB data
